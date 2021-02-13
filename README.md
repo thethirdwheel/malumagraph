@@ -6,7 +6,7 @@ We use the correlations provided [here](https://www.nature.com/articles/srep2668
 
 ## Phoneme detection
 
-We use t2p to parse our input into phonemes in order to calculate the curve shape. WSJ [built something](http://graphics.wsj.com/hamilton-methodology/) to visualize rhyme schemes that I'm interested in leveraging/integrating.
+We use [t2p](http://www.cs.cmu.edu/afs/cs.cmu.edu/user/lenzo/html/areas/t2p/) to parse our input into phonemes in order to calculate the curve shape. WSJ [built something](http://graphics.wsj.com/hamilton-methodology/) to visualize rhyme schemes that I'm interested in leveraging/integrating.
 
 ## Types of effect
 
