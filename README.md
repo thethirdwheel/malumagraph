@@ -4,7 +4,7 @@ Generate language visualizations based on the bouba-kiki effect.
 ## Effect sizes
 We use the spikiness/roundness intensities provided [here](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0208874)
 to determine the strength and type of bouba-kiki effect caused by a particular phoneme.  Right now, we categorize the voicing, openness,
-and position of a phoneme and assign it the given roundness/spikiness.  Future work might make this more continuous (and better aligned 
+and position of a phoneme and assign it the given roundness/spikiness (WIP [here](https://docs.google.com/spreadsheets/d/1Nf8_7lCuu0171qFZ6PjzcFiPY7ArnekEfDb1L7ZwehY/edit?usp=sharing)).  Future work might make this more continuous (and better aligned 
 with our intuitions) by leveraging [Mesgarani's work](http://audition.ens.fr/P2web/eval2010/DP_Mesgarani2008.pdf) in phoneme confusion.
 
 If we progress from text to waveforms of recorded speech, the work [here](https://www.nature.com/articles/srep26681/tables/1) could help 
