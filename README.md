@@ -19,7 +19,10 @@ To allow us to handle neologisms and words not in the CMU Pronouncing Dictionary
 WSJ [built something](http://graphics.wsj.com/hamilton-methodology/) to visualize rhyme schemes that I'm interested in leveraging/integrating.
 CMUdict also provides emphasis information, which may be useful for visualizing the rhythms of language and for drawing attention to more apparent sounds.
 
-##Visualization Considerations
+## Syllabification
+Thankfully the WSJ project references [this work](https://www.aclweb.org/anthology/N09-1035.pdf), which provides a handy-dandy [syllabification of CMUdict](https://webdocs.cs.ualberta.ca/~kondrak/cmudict/cmudict.rep).
+
+## Visualization Considerations
 
 Initially, we just wanted to graph the "roundness" of the phonemes, in the order of the provided corpus.  However, it's also interesting to try to use the syllables as the unit of calculation.  We're also interested in applying multipliers based on stress, to emphasize sounds in stressed syllables over unstressed ones.  Breaking things into syllables also seems like it would help with future efforts to incorporate rhyme, assonance, alliteration, and other content of interest.
 
