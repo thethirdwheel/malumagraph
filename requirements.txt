@@ -1,0 +1,5 @@
+cmudict
+plotly
+numpy
+psutil
+kaleido
