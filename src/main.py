@@ -7,62 +7,16 @@ from plotly.subplots import make_subplots
 import numpy as np
 import plotly.figure_factory as ff
 
-#mapping from arpabet to roundness (should move to a file)
-phone2roundness = {
-	'AA' : 0.70, #Non-Front
-	'AE' : 0.49, #Front
-	'AH' : 0.70, #Non-Front
-	'AO' : 0.70, #Non-Front
-	'AW' : 0.70, #Non-Front
-	'AX' : 0.49, #Front
-	'AXR' : 0.70, #Non-Front
-	'AY' : 0.49, #Front
-	'EH' : 0.49, #Front
-	'ER' : 0.49, #Front
-	'EY' : 0.70, #Non-Front
-	'IH' :  0.49, #Front
-	'IX' :  0.49, #Front
-	'IY' :  0.49, #Front
-	'OW' :  0.70, #Non-Front
-	'OY' :  0.70, #Non-Front
-	'UH' :  0.70, #Non-Front
-	'UW' :  0.70, #Non-Front
-	'UX' :  0.70, #Non-Front
-	'B' : 0.69, #voiced labial
-	'CH' : 0.11, #voiceless alveolar
-	'D' : 0.64, #voiced alveolar
-	'DH' : 0.4, #voiced dental 
-	'DX' : 0.64, #voiced alveolar
-	'EL' : 0.64, #voiced alveolar
-	'EM' : 0.69, #voiced labial
-	'EN' : 0.64, #voiced alveolar
-	'F' : 0.75, #voiceless labial
-	'G' : 0.72, #voiced velar
-	'HH' : 0.3, #voiceless glottal (we're pretending it's velar)
-	'H' : 0.3, #voiceless glottal (we're pretending it's velar)
-	'JH' : 0.64, #voiced alveolar
-	'K' : 0.3, #voiceless velar
-	'L' : 0.64, #voiced alveolar
-	'M' : 0.69, #voiced labial
-	'N' : 0.64, #voiced alveolar
-	'NX' : 0.72, #voiced velar
-	'NG' : 0.72, #voiced velar
-	'NX' : 0.64, #voiced alveolar
-	'P' : 0.75, #voiceless labial
-	'Q' : 0.3, #voiceless glottal (this is a weird ridiculous one; we're pretending velar)
-	'R' : 0.64, #voiced alveolar
-	'S' : 0.11, #voiceless alveolar
-	'SH' : 0.3, #voiceless postalveolar (we're pretending it's velar)
-	'T' : 0.11, #voiceless alveolar
-	'TH' : 0.64, #voiceless dental (tricky one to properly assign, placeholder)
-	'V' : 0.69, #voiced labial
-	'W' : 0.72, #voiced velar
-	'WH' : 0.3, #voiceless velar
-	'Y' : 0.72, #voiced velar
-	'Z' : 0.64, #voiced alveolar
-	'ZH' : 0.72 #voiced velar
-}
-word2phone = cmudict.dict()
+def polar_dists(scores, cols):
+	temp_scores = scores
+	temp_scores[temp_scores == None] = 0
+	num_lines = len(temp_scores)
+	fig = make_subplots(num_lines, cols)
+	for i, line in enumerate(temp_scores, start=1):
+		for j, score in enumerate(line):
+			print(f"score:{score}", file=sys.stderr)
+			fig.add_trace(go.Scatterpolar(r=np.random.normal(scale=score,size=24), theta=list(range(0,345,15)), mode='lines'))
+	return fig
 
 def contour_map(scores):
 	temp_scores = scores
@@ -70,6 +24,7 @@ def contour_map(scores):
 	temp_scores = np.vstack([temp_scores, np.zeros_like(temp_scores[0])])
 	temp_scores = np.insert(temp_scores, 0, 0, axis=0)
 	temp_scores = np.insert(temp_scores, 0, 0, axis=1)
+	temp_scores = np.flip(temp_scores,0)
 	fig = go.Figure(data = go.Contour(z=temp_scores, line_smoothing=0.85))
 	return fig
 
@@ -81,12 +36,14 @@ def annotated_heat_map(scores, sounds):
 	return fig
 
 def sparklines(scores, cols):
-	num_lines = len(scores)
+	temp_scores = scores
+	temp_scores[temp_scores == None] = 0
+	num_lines = len(temp_scores)
 	fig = make_subplots(num_lines, 1)
-	for index, line in enumerate(scores, start=1):
+	for index, line in enumerate(temp_scores, start=1):
 		fig.add_trace(go.Scatter(y=line, x=list(range(0,cols)), mode='lines'), index, 1)
 	fig.update_xaxes(visible=False, fixedrange=True)
-	fig.update_yaxes(visible=False, fixedrange=True)
+	fig.update_yaxes(visible=True)
 	fig.update_layout(annotations=[], overwrite=True)
 	fig.update_layout(
 		showlegend=False,
@@ -95,6 +52,78 @@ def sparklines(scores, cols):
 		)
 	return fig
 
+def make_phone_scores(phoneme_csv="phoneme_roundness.csv"):
+	phone2spikiness = {}
+	with open(phoneme_csv) as f:
+		for l in f:
+			vals = l.split(",")
+			#spiky is positive, 0 is neutral, round is negative
+			#phone2spikiness[vals[0]] = (float(vals[1])-0.5)
+			phone2spikiness[vals[0]] = float(vals[1])
+	return phone2spikiness
+
+class Phone:
+	def __init__(self, phone, score):
+		self.phone = phone
+		self.score = score
+
+	def __repr__(self):
+		return f"{self.phone} ({self.score})"
+
+class Syllable:
+	def __init__(self, stress, phones):
+		self.stress = int(stress)
+		self.phones = phones
+
+	def __repr__(self):
+		return f"stress: {self.stress} phones: {self.phones}"
+
+	def __str__(self):
+		return f"stress: {self.stress} phones: {self.phones}"
+
+	def score(self):
+		s = 0
+		for p in self.phones:
+			if p and p.score:
+				s += p.score
+		return s*2**self.stress
+
+class Syllabification:
+	def __init__(self, word, description):
+		self.word = word
+		syllables = description.split(" - ")
+		self.syllables = []
+		for s in syllables:
+			stress = 0
+			phones = []
+			phone_string = s.split(" ")
+			for i,p in enumerate(phone_string):
+				if p[-1].isdigit():
+					stress = p[-1]
+					phones.append(Phone(p[:-1],None))
+				else:
+					phones.append(Phone(p, None))
+			self.syllables.append(Syllable(stress,phones))
+
+	def __repr__(self):
+		return f"word: {self.word}, syllables: {self.syllables}"
+
+	def __str__(self):
+		return f"word: {self.word}, syllables: {self.syllables}"
+
+
+def make_cmudict(cmudict_file="cmudict.rep"):
+	word2phone = {}
+	with open(cmudict_file) as f:
+		for l in f:
+			if l[0:2] != "##":
+				vals = l.strip().split("  ")
+				word2phone[vals[0]] = Syllabification(vals[0], vals[1])
+	return word2phone
+
+phone2spikiness= make_phone_scores()
+print(phone2spikiness,file=sys.stderr)
+word2phone = make_cmudict()
 punctuation_table = str.maketrans(dict.fromkeys(string.punctuation))
 poem_scores = []
 poem_stresses = []
@@ -108,45 +137,51 @@ with open("corpus.txt") as f:
 		stresses = []
 		sounds = []
 		for word in l.split(" "):
-			phones = word2phone[word.lower().strip().translate(punctuation_table)]
-			if phones and phones[0]:
-				for phone in phones[0]:
-					if phone[-1].isdigit():
-						stresses.append(phone[-1])
-						phone = phone[0:-1]
-					else:
-						stresses.append(0)
-					scores.append(phone2roundness[phone])
-					sounds.append(phone)
-				scores.append(None)
-				stresses.append(None)
-				sounds.append(None)
+			clean_word = word.upper().strip().translate(punctuation_table)
+			w = None
+			if clean_word in word2phone:
+				w = word2phone[clean_word]
+			else:
+				print(clean_word,file=sys.stderr)
+			if w and w.syllables:
+				for s in w.syllables:
+					for p in s.phones:
+						print(f"phone:{p} type:{type(p)}",file=sys.stderr)
+						p.score = phone2spikiness[p.phone]
+					scores.append(s.score())
+					sounds.append(s)
+			scores.append(None)
+			sounds.append(None)
 		poem_scores.append(scores)
-		poem_stresses.append(stresses)
 		poem_sounds.append(sounds)
+
 for i in poem_scores:
 	if len(i) > cols:
 		cols = len(i)
-print(f"rows: {rows} cols: {cols}", file=sys.stderr)
 
 justified_scores = np.full(shape=(rows,cols), fill_value=None)
-justified_sounds= np.empty(shape=(rows,cols), dtype="str")
 
 for i, row in enumerate(poem_scores):
 	for j, val in enumerate(row):
-		#Adjust scores to be negative if spiky, positive if round
+		#Adjust scores to be negative if round, positive if spiky, and centered at 0 
 		if val:
-			justified_scores[i][j] = val - 0.5
+			justified_scores[i][j] = (val - 0.5)*-1.0
 		else:
 			justified_scores[i][j] = None
-		justified_sounds[i][j] = poem_sounds[i][j]
-print(justified_scores, file=sys.stderr)
-print(justified_sounds, file=sys.stderr)
-
-fig = sparklines(justified_scores, cols)
+for sound in poem_sounds:
+	if sound:
+		print(sound,file=sys.stderr)
+fig = polar_dists(justified_scores, cols)
+#fig = sparklines(justified_scores, cols)
 #fig = annotated_heat_map(justified_scores, justified_sounds)
 #fig = contour_map(justified_scores)
 img = fig.to_image(format="svg")
 with os.fdopen(sys.stdout.fileno(), "wb", closefd=False) as stdout:
     stdout.write(img)
     stdout.flush()
+
+#Joe's idea for producing sound-shape correspondence (instead of graphing "spikiness")
+#Create (normal) distribution
+#Tune distribution with variance proportional to spikiness and mean proportional to stress
+#Draw number of points from distribution proportional to word length
+#Graph in polar coordinates where r is the value drawn from the distribution and theta is position in the poem
