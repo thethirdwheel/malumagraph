@@ -6,7 +6,9 @@ WORKDIR /code
 
 # copy the dependencies file to the working directory
 COPY requirements.txt .
+COPY phoneme_roundness.csv .
 COPY corpus.txt .
+COPY cmudict.rep .
 
 # install dependencies
 RUN pip install -r requirements.txt
