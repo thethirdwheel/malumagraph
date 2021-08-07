@@ -11,7 +11,9 @@ COPY corpus.txt .
 COPY cmudict.rep .
 
 # install dependencies
+RUN apt install libcairo2-dev pkg-config
 RUN pip install -r requirements.txt
+
 
 # copy the content of the local src directory to the working directory
 COPY src/ .
