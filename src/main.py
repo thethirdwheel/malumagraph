@@ -257,9 +257,6 @@ if not os.path.exists("cmudict.db"):
 	#print(phone2spikiness,file=sys.stderr)
 	word2phone = make_cmudict()
 	cmudict_to_sqlite(word2phone, phone2spikiness)
-	#There's something wrong with this that is leading to a "sqlite3.DatabaseError: file is not a database"
-	with open("cmudict.db", 'rb') as fin:
-		sys.stdout.buffer.write(fin.read())
 	quit()
 else:
 	print("using pre-existing sqlite database", file=sys.stderr)

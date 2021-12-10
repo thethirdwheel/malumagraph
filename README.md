@@ -26,6 +26,16 @@ Thankfully the WSJ project references [this work](https://www.aclweb.org/antholo
 
 Initially, we just wanted to graph the "roundness" of the phonemes, in the order of the provided corpus.  However, it's also interesting to try to use the syllables as the unit of calculation.  We're also interested in applying multipliers based on stress, to emphasize sounds in stressed syllables over unstressed ones.  Breaking things into syllables also seems like it would help with future efforts to incorporate rhyme, assonance, alliteration, and other content of interest.
 
+## Note about iterating on the sqlite database (cmudict.db)
+
+I'm developing on a Windows box, which leads to all sorts of nonsense.  One thing is that you can't redirect the stdout output of the cmudict.db from the docker run output to your filesystem and get something that the Dockerfile can pull into the image next time you run docker build.  You'll get the error "sqlite3.DatabaseError: file is not a database" if you mess this up.  The way out is to build your docker container and run /bin/bash in it in interactive mode
+
+`docker run -it imagename /bin/bash`
+
+And then, inside the container, run `rm cmudict.db` followed by `python main.py`
+
+You should see a new `cmudict.db` file.  In another terminal in your host OS run `docker ps` to get your container image id, and then `docker cp [container_image]:/code/cmudict.db /desired/path/on/host/os`.
+
 ## References
 https://www.nature.com/articles/srep26681/tables/1
 http://graphics.wsj.com/hamilton-methodology/
