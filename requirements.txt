@@ -5,3 +5,5 @@ psutil
 kaleido
 pandas
 pycairo
+jsonlib-python3
+pysqlite3

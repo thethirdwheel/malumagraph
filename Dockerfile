@@ -9,6 +9,7 @@ COPY requirements.txt .
 COPY phoneme_roundness.csv .
 COPY corpus.txt .
 COPY cmudict.rep .
+#COPY cmudict.db .
 
 # install dependencies
 RUN apt install libcairo2-dev pkg-config
