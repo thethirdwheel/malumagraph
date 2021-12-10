@@ -258,15 +258,11 @@ if not os.path.exists("cmudict.db"):
 	word2phone = make_cmudict()
 	cmudict_to_sqlite(word2phone, phone2spikiness)
 	#There's something wrong with this that is leading to a "sqlite3.DatabaseError: file is not a database"
-	#with open("cmudict.db", 'rb') as fin:
-	#	sys.stdout.buffer.write(b"%s" % fin.read())
-	#quit()
+	with open("cmudict.db", 'rb') as fin:
+		sys.stdout.buffer.write(fin.read())
+	quit()
 else:
 	print("using pre-existing sqlite database", file=sys.stderr)
-	phone2spikiness= make_phone_scores()
-	#print(phone2spikiness,file=sys.stderr)
-	word2phone = make_cmudict()
-	cmudict_to_sqlite(word2phone, phone2spikiness)
 
 
 #All of the below is very ugly, maintaining a lot of global state, poor encapsulation, business logic+I/O &c, will fix later
@@ -288,7 +284,7 @@ with open("corpus.txt") as f:
 			clean_word = word.upper().strip().translate(punctuation_table)
 			w = None
 			try:
-				#the funky trailing , after clean_word is to help python realize that this is a sequence (necessary for the qmark syntax)
+				#the funky trailing ',' after clean_word is to help python realize that this is a sequence (necessary for the qmark syntax)
 				cur.execute("SELECT syllabification FROM cmudict WHERE word=? LIMIT 1", (clean_word,))
 				w = cur.fetchone()
 				if w:
@@ -311,6 +307,7 @@ with open("corpus.txt") as f:
 			scores.append(None)
 		corpus_scores.append(scores)
 		structured_corpus.append(structured_line)
+con.close()
 
 for i in corpus_scores:
 	if len(i) > cols:
