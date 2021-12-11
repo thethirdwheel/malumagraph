@@ -266,16 +266,12 @@ else:
 con = sqlite3.connect("cmudict.db")
 cur = con.cursor()
 punctuation_table = str.maketrans(dict.fromkeys(string.punctuation))
-corpus_scores = []
-corpus_stresses = []
 structured_corpus = []
 rows = 0
 cols = 0
 with open("corpus.txt") as f:
 	for l in f:
 		rows += 1
-		scores = []
-		stresses = []
 		structured_line = []
 		for word in l.split(" "):
 			clean_word = word.upper().strip().translate(punctuation_table)
@@ -285,40 +281,16 @@ with open("corpus.txt") as f:
 				cur.execute("SELECT syllabification FROM cmudict WHERE word=? LIMIT 1", (clean_word,))
 				w = cur.fetchone()
 				if w:
-					#do some json parsing to get the goods
-					w_json=json.loads(w[0])
 					w_syllabification = Syllabification.from_json(clean_word, w[0])
-					for s in w_json:
-						phone_scores = []
-						for p in s:
-							if type(p) is dict:
-								items = list(p.items())
-								phone_scores.append(items[0][1])
-						scores.append(score_syllable(s[0],phone_scores))
 					structured_line.append(w_syllabification)
 				else:
 					print(f"couldn't find word: {clean_word}",file=sys.stderr)	
 			except sqlite3.ProgrammingError:
 				print(clean_word,file=sys.stderr)
 				raise
-			scores.append(None)
-		corpus_scores.append(scores)
 		structured_corpus.append(structured_line)
 con.close()
 
-for i in corpus_scores:
-	if len(i) > cols:
-		cols = len(i)
-
-justified_scores = np.full(shape=(rows,cols), fill_value=None)
-
-for i, row in enumerate(corpus_scores):
-	for j, val in enumerate(row):
-		#Adjust scores to be negative if round, positive if spiky, and centered at 0 
-		if val:
-			justified_scores[i][j] = val #(val - 0.5)*-1.0
-		else:
-			justified_scores[i][j] = None
 draw_corpus(structured_corpus)
 
 #Joe's idea for producing sound-shape correspondence (instead of graphing "spikiness")
