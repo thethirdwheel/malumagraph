@@ -1,3 +1,4 @@
+from statistics import mean
 import cmudict
 import os
 import sys
@@ -24,9 +25,9 @@ def make_phone_scores(phoneme_csv="phoneme_roundness.csv"):
 	return phone2spikiness
 
 def score_syllable(stress, phone_scores):
-	'''take stress and list of phone roundness scores and return a total score'''
-	s = sum(phone_scores)
-	return s*2**stress
+	'''take stress and list of phone roundness scores and return an aggregate score (currently the mean)'''
+	s = mean(phone_scores)
+	return s
 
 class Phone:
 	def __init__(self, phone, score):
@@ -103,6 +104,15 @@ class Syllabification:
 		w.syllables = syllables
 		return w
 
+def draw_polycloud_syllable(ctx, syl):
+	l = 5 + 2*len(syl.phones)
+	h = 5 + 5*syl.stress
+	ctx.save()
+	ctx.scale(l, h)
+	#polyclouds are ~3x3 objects, so scaled up 5x they are close to 15x15
+	draw_polycloud(ctx, 3*len(syl.phones), syl.score())
+	ctx.restore()
+	return l*3
 
 def draw_syllable(ctx, syl):
 	'''love a rectangle with a wiggle in it'''
@@ -115,7 +125,7 @@ def draw_syllable(ctx, syl):
 	r = 5.0
 	ctx.save()
 	ctx.move_to(my_x+r,my_y)
-	ctx.scale(1.,1. + 1.*syl.stress*0.25)
+	ctx.scale(1.,1. + 1.*syl.stress)
 	for i,p in enumerate(syl.phones):
 		if (i % 2 == 0):
 			if (p.score > 0.5):
@@ -136,7 +146,7 @@ def draw_syllable(ctx, syl):
 				ctx.rel_line_to(r,r)
 		my_x = my_x + 2*r
 		syllable_len = syllable_len + 2*r
-	ctx.rectangle(x-r, y-(syllable_height/2), syllable_len, syllable_height)
+	#ctx.rectangle(x-r, y-(syllable_height/2), syllable_len, syllable_height)
 	ctx.restore()
 	return syllable_len
 
@@ -151,12 +161,12 @@ def draw_word(ctx, word):
 		rectangle_y = y - (word_height/4)
 		ctx.save()
 		ctx.translate(x+word_len,rectangle_y+15)
-		syllable_len = draw_syllable(ctx,syl)
+		syllable_len = draw_polycloud_syllable(ctx,syl)
 		ctx.restore()
 		word_len = word_len + syllable_len + syllable_buffer
 	word_len = word_len - (syllable_buffer)
 	ctx.save()
-	ctx.rectangle(x, y, word_len, word_height)
+	#ctx.rectangle(x, y, word_len, word_height)
 	ctx.restore()
 	return word_len
 
@@ -212,10 +222,15 @@ def distance(x,y,x1,y1):
 
 #calculate slope and y intercept for line passing through x1,y1 and x2,y2
 def mb_from_points(x1,y1,x2,y2):
-	m = (y2-y1)/(x2-x1)
-	b = y1 - m*x1
+	if x2==x1:
+		m = None
+		b = None
+	else:
+		m = (y2-y1)/(x2-x1)
+		b = y1 - m*x1
 	return m,b
 
+#This will always be a polygon in the unit circle (dimensions 2x2), with portrusions at most d beyond that where d is the length of the side of the polygon
 def draw_polycloud(ctx, sides, roundness):
 	'''draw unit polycloud with given number of sides (polygon with line-length bumps)'''
 	unit_angle = 2*math.pi / sides
@@ -244,9 +259,9 @@ def draw_polycloud(ctx, sides, roundness):
 		#I think by shifting along the line x1,y1->x2,y2 we can maybe be smoothly parameterized?
 		guideline_slope, guideline_intercept = mb_from_points(x1,y1,x2,y2)
 		control_point_1_x = x1*roundness + x2*(1-roundness) #in theory if roundness is 1.0, control_point_1 will be at x1,y1, if it is 0 it will be at x2,y2
-		control_point_1_y = guideline_slope*control_point_1_x + guideline_intercept
+		control_point_1_y = guideline_slope*control_point_1_x + guideline_intercept if guideline_slope else y1*roundness + y2*(1-roundness)
 		control_point_2_x = x1*(1-roundness) + x2*roundness
-		control_point_2_y = guideline_slope*control_point_2_x + guideline_intercept
+		control_point_2_y = guideline_slope*control_point_2_x + guideline_intercept if guideline_slope else y1*(1-roundness) + y2*(roundness)
 		ctx.curve_to(control_point_1_x,control_point_1_y,control_point_2_x,control_point_2_y,cur_x,cur_y)
 		x = cur_x
 		y = cur_y
@@ -318,13 +333,13 @@ def sketchbook():
 
 def make_structured_corpus(corpus, cmudictdb):
 	#All of the below is very ugly, maintaining a lot of global state, poor encapsulation, business logic+I/O &c, will fix later
-	con = sqlite3.connect(args.cmudictdb)
+	con = sqlite3.connect(cmudictdb)
 	cur = con.cursor()
 	punctuation_table = str.maketrans(dict.fromkeys(string.punctuation))
 	#The structured corpus is an array of structured_lines
 	#Each structured line is an array of Syllabifications of the words in the coinciding line in the original corpus
 	structured_corpus = []
-	with open(args.corpus) as f:
+	with open(corpus) as f:
 		for l in f:
 			structured_line = []
 			for word in l.split(" "):
