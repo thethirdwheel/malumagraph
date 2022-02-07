@@ -197,7 +197,9 @@ def draw_word(ctx, x, y, word):
 		syllable_len = draw_syllable(ctx,x+word_len,rectangle_y+15,syl)
 		word_len = word_len + syllable_len + syllable_buffer
 	word_len = word_len - (syllable_buffer)
+	ctx.save()
 	ctx.rectangle(x, y, word_len, word_height)
+	ctx.restore()
 	return word_len
 
 def draw_corpus(structured_corpus):
@@ -326,43 +328,41 @@ def cmudict_to_sqlite(cmudict, phone_scores, sqlite_file="cmudict.db"):
 	con.commit()
 	con.close()
 
-def main(args):
-	if not os.path.exists(args.cmudictdb):
-		phone2spikiness= make_phone_scores()
-		#print(phone2spikiness,file=sys.stderr)
-		word2phone = make_cmudict(args.cmudictraw)
-		cmudict_to_sqlite(word2phone, phone2spikiness, args.cmudictdb)
-		quit()
-	else:
-		print("using pre-existing sqlite database", file=sys.stderr)
+def build_sqlite_cmudict(phoneme_roundness_path, raw_path, db_path):
+	phone2spikiness = make_phone_scores(phoneme_roundness_path)
+	#print(phone2spikiness,file=sys.stderr)
+	word2phone = make_cmudict(raw_path)
+	cmudict_to_sqlite(word2phone, phone2spikiness, db_path)
 
-	#WIDTH, HEIGHT = 612, 792
-	#with cairo.SVGSurface(os.fdopen(sys.stdout.fileno(), "wb", closefd=False), WIDTH, HEIGHT) as surface:
-	#	ctx = cairo.Context(surface)
+def sketchbook():
+	WIDTH, HEIGHT = 612, 792
+	with cairo.SVGSurface(os.fdopen(sys.stdout.fileno(), "wb", closefd=False), WIDTH, HEIGHT) as surface:
+		ctx = cairo.Context(surface)
 
-		# ctx.save()
-		# ctx.translate(40,40)
-		# ctx.scale(20,20)
-		# draw_polycloud(ctx, 4, 1)
-		# draw_polycloud(ctx, 4, 0.5)
-		# draw_polycloud(ctx, 4, 0)
-		# ctx.restore()
+		ctx.save()
+		ctx.translate(40,40)
+		ctx.scale(20,20)
+		draw_polycloud(ctx, 4, 1)
+		draw_polycloud(ctx, 4, 0.5)
+		draw_polycloud(ctx, 4, 0)
+		ctx.restore()
 
-		# ctx.save()
-		# ctx.translate(20,20)
-		# ctx.scale(20,20)
-		# draw_polygon(ctx,4)
-		# ctx.restore()
+		ctx.save()
+		ctx.translate(20,20)
+		ctx.scale(20,20)
+		draw_polygon(ctx,4)
+		ctx.restore()
 
-		# ctx.save()
-		# ctx.translate(40,40)
-		# ctx.scale(20,20)
-		# draw_polygon(ctx,5)
-		# ctx.restore()
+		ctx.save()
+		ctx.translate(40,40)
+		ctx.scale(20,20)
+		draw_polygon(ctx,5)
+		ctx.restore()
 
-		# ctx.stroke()
-		# surface.flush()
+		ctx.stroke()
+		surface.flush()
 
+def make_structured_corpus(corpus, cmudictdb):
 	#All of the below is very ugly, maintaining a lot of global state, poor encapsulation, business logic+I/O &c, will fix later
 	con = sqlite3.connect(args.cmudictdb)
 	cur = con.cursor()
@@ -390,15 +390,24 @@ def main(args):
 					raise
 			structured_corpus.append(structured_line)
 	con.close()
+	return structured_corpus
 
+def main(args):
+	if not os.path.exists(args.cmudictdb):
+		build_sqlite_cmudict(args.phonemecsv,args.cmudictraw,args.cmudictdb)
+	else:
+		print("using pre-existing sqlite database", file=sys.stderr)
+
+	structured_corpus = make_structured_corpus(args.corpus, args.cmudictdb)
 	draw_corpus(structured_corpus)
-
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Transform a corpus of English text into a non-representative visualization preserving the sense of its sounds through sound-shape correspondence")
 	parser.add_argument('--corpus', default="corpus.txt", help="The corpus to be processed")
 	parser.add_argument('--cmudictdb', default="cmudict.db", help="The cmu pronouncing dictionary sqlite database to use")
 	parser.add_argument('--cumdictraw', default="cmudict.rep", help="The raw cmudict file to use (.rep expected); only necessary if no cmudictdb given")
+	parser.add_argument('--phonemecsv', default="phoneme_roundess.csv", help="The path to the .csv file containing phoneme roundness scores")
+	parser.add_argument('--sketchbook', action='store_true')
 	args = parser.parse_args()
 	main(args)
 #Joe's idea for producing sound-shape correspondence (instead of graphing "spikiness")
