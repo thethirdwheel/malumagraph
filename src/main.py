@@ -10,6 +10,7 @@ import cairo
 import sqlite3
 import math
 import json
+import argparse
 
 def polar_dists(scores, cols):
 	'''Make a pretty plot of scores in polar coordinates; it's not very useful honestly'''
@@ -161,7 +162,7 @@ def draw_syllable(ctx, x, y, syl):
 	r = 5.0
 	ctx.save()
 	ctx.move_to(my_x+r,my_y)
-	ctx.scale(1.,1. + 1.*syl.stress*0.25)
+	#ctx.scale(1.,1. + 1.*syl.stress*0.25)
 	for i,p in enumerate(syl.phones):
 		if (i % 2 == 0):
 			if (p.score > 0.5):
@@ -325,75 +326,81 @@ def cmudict_to_sqlite(cmudict, phone_scores, sqlite_file="cmudict.db"):
 	con.commit()
 	con.close()
 
-WIDTH, HEIGHT = 612, 792
-with cairo.SVGSurface(os.fdopen(sys.stdout.fileno(), "wb", closefd=False), WIDTH, HEIGHT) as surface:
-	ctx = cairo.Context(surface)
+def main(args):
+	if not os.path.exists(args.cmudictdb):
+		phone2spikiness= make_phone_scores()
+		#print(phone2spikiness,file=sys.stderr)
+		word2phone = make_cmudict(args.cmudictraw)
+		cmudict_to_sqlite(word2phone, phone2spikiness, args.cmudictdb)
+		quit()
+	else:
+		print("using pre-existing sqlite database", file=sys.stderr)
 
-	ctx.save()
-	ctx.translate(40,40)
-	ctx.scale(20,20)
-	draw_polycloud(ctx, 4, 1)
-	draw_polycloud(ctx, 4, 0.5)
-	draw_polycloud(ctx, 4, 0)
-	ctx.restore()
+	#WIDTH, HEIGHT = 612, 792
+	#with cairo.SVGSurface(os.fdopen(sys.stdout.fileno(), "wb", closefd=False), WIDTH, HEIGHT) as surface:
+	#	ctx = cairo.Context(surface)
 
-	# ctx.save()
-	# ctx.translate(20,20)
-	# ctx.scale(20,20)
-	# draw_polygon(ctx,4)
-	# ctx.restore()
+		# ctx.save()
+		# ctx.translate(40,40)
+		# ctx.scale(20,20)
+		# draw_polycloud(ctx, 4, 1)
+		# draw_polycloud(ctx, 4, 0.5)
+		# draw_polycloud(ctx, 4, 0)
+		# ctx.restore()
 
-	# ctx.save()
-	# ctx.translate(40,40)
-	# ctx.scale(20,20)
-	# draw_polygon(ctx,5)
-	# ctx.restore()
+		# ctx.save()
+		# ctx.translate(20,20)
+		# ctx.scale(20,20)
+		# draw_polygon(ctx,4)
+		# ctx.restore()
 
-	ctx.stroke()
-	surface.flush()
-quit()
+		# ctx.save()
+		# ctx.translate(40,40)
+		# ctx.scale(20,20)
+		# draw_polygon(ctx,5)
+		# ctx.restore()
 
-if not os.path.exists("cmudict.db"):
-	phone2spikiness= make_phone_scores()
-	#print(phone2spikiness,file=sys.stderr)
-	word2phone = make_cmudict()
-	cmudict_to_sqlite(word2phone, phone2spikiness)
-	quit()
-else:
-	print("using pre-existing sqlite database", file=sys.stderr)
+		# ctx.stroke()
+		# surface.flush()
 
+	#All of the below is very ugly, maintaining a lot of global state, poor encapsulation, business logic+I/O &c, will fix later
+	con = sqlite3.connect(args.cmudictdb)
+	cur = con.cursor()
+	punctuation_table = str.maketrans(dict.fromkeys(string.punctuation))
+	#The structured corpus is an array of structured_lines
+	#Each structured line is an array of Syllabifications of the words in the coinciding line in the original corpus
+	structured_corpus = []
+	with open(args.corpus) as f:
+		for l in f:
+			structured_line = []
+			for word in l.split(" "):
+				clean_word = word.upper().strip().translate(punctuation_table)
+				w = None
+				try:
+					#the funky trailing ',' after clean_word is to help python realize that this is a sequence (necessary for the qmark syntax)
+					cur.execute("SELECT syllabification FROM cmudict WHERE word=? LIMIT 1", (clean_word,))
+					w = cur.fetchone()
+					if w:
+						w_syllabification = Syllabification.from_json(clean_word, w[0])
+						structured_line.append(w_syllabification)
+					else:
+						print(f"couldn't find word: {clean_word}",file=sys.stderr)	
+				except sqlite3.ProgrammingError:
+					print(clean_word,file=sys.stderr)
+					raise
+			structured_corpus.append(structured_line)
+	con.close()
 
-#All of the below is very ugly, maintaining a lot of global state, poor encapsulation, business logic+I/O &c, will fix later
-con = sqlite3.connect("cmudict.db")
-cur = con.cursor()
-punctuation_table = str.maketrans(dict.fromkeys(string.punctuation))
-#The structured corpus is an array of structured_lines
-#Each structured line is an array of Syllabifications of the words in the coinciding line in the original corpus
-structured_corpus = []
-with open("corpus.txt") as f:
-	for l in f:
-		structured_line = []
-		for word in l.split(" "):
-			clean_word = word.upper().strip().translate(punctuation_table)
-			w = None
-			try:
-				#the funky trailing ',' after clean_word is to help python realize that this is a sequence (necessary for the qmark syntax)
-				cur.execute("SELECT syllabification FROM cmudict WHERE word=? LIMIT 1", (clean_word,))
-				w = cur.fetchone()
-				if w:
-					w_syllabification = Syllabification.from_json(clean_word, w[0])
-					structured_line.append(w_syllabification)
-				else:
-					print(f"couldn't find word: {clean_word}",file=sys.stderr)	
-			except sqlite3.ProgrammingError:
-				print(clean_word,file=sys.stderr)
-				raise
-		structured_corpus.append(structured_line)
-con.close()
-
-draw_corpus(structured_corpus)
+	draw_corpus(structured_corpus)
 
 
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description="Transform a corpus of English text into a non-representative visualization preserving the sense of its sounds through sound-shape correspondence")
+	parser.add_argument('--corpus', default="corpus.txt", help="The corpus to be processed")
+	parser.add_argument('--cmudictdb', default="cmudict.db", help="The cmu pronouncing dictionary sqlite database to use")
+	parser.add_argument('--cumdictraw', default="cmudict.rep", help="The raw cmudict file to use (.rep expected); only necessary if no cmudictdb given")
+	args = parser.parse_args()
+	main(args)
 #Joe's idea for producing sound-shape correspondence (instead of graphing "spikiness")
 #Create (normal) distribution
 #Tune distribution with variance proportional to spikiness and mean proportional to stress
