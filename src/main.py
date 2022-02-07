@@ -104,10 +104,12 @@ class Syllabification:
 		return w
 
 
-def draw_syllable(ctx, x, y, syl):
+def draw_syllable(ctx, syl):
 	'''love a rectangle with a wiggle in it'''
 	syllable_len = 0
 	syllable_height = 30
+	x = 0
+	y = 0
 	my_x = x
 	my_y = y
 	r = 5.0
@@ -138,8 +140,10 @@ def draw_syllable(ctx, x, y, syl):
 	ctx.restore()
 	return syllable_len
 
-def draw_word(ctx, x, y, word):
+def draw_word(ctx, word):
 	'''let's make boxes with syllables inside them'''
+	x = 0
+	y = 0
 	syllable_buffer = 10
 	word_height = 20
 	word_len = syllable_buffer
@@ -147,7 +151,7 @@ def draw_word(ctx, x, y, word):
 		rectangle_y = y - (word_height/4)
 		ctx.save()
 		ctx.translate(x+word_len,rectangle_y+15)
-		syllable_len = draw_syllable(ctx,0,0,syl)
+		syllable_len = draw_syllable(ctx,syl)
 		ctx.restore()
 		word_len = word_len + syllable_len + syllable_buffer
 	word_len = word_len - (syllable_buffer)
@@ -167,7 +171,7 @@ def draw_corpus(structured_corpus):
 			for w in l:
 				ctx.save()
 				ctx.translate(xpos,ypos)
-				word_len = draw_word(ctx, 0, 0, w)
+				word_len = draw_word(ctx, w)
 				ctx.restore()
 				xpos = xpos + word_len + 20
 			ypos = ypos + 60
