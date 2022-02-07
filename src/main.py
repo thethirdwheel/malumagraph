@@ -12,55 +12,6 @@ import math
 import json
 import argparse
 
-def polar_dists(scores, cols):
-	'''Make a pretty plot of scores in polar coordinates; it's not very useful honestly'''
-	temp_scores = scores
-	temp_scores[temp_scores == None] = 0
-	num_lines = len(temp_scores)
-	fig = make_subplots(num_lines, cols)
-	for i, line in enumerate(temp_scores, start=1):
-		for j, score in enumerate(line):
-			print(f"score:{score}", file=sys.stderr)
-			fig.add_trace(go.Scatterpolar(r=np.random.normal(scale=score,size=24), theta=list(range(0,345,15)), mode='lines'))
-	return fig
-
-def contour_map(scores):
-	'''Make a simple contour-map representation of scores'''
-	temp_scores = scores
-	temp_scores[temp_scores == None] = 0
-	temp_scores = np.vstack([temp_scores, np.zeros_like(temp_scores[0])])
-	temp_scores = np.insert(temp_scores, 0, 0, axis=0)
-	temp_scores = np.insert(temp_scores, 0, 0, axis=1)
-	temp_scores = np.flip(temp_scores,0)
-	fig = go.Figure(data = go.Contour(z=temp_scores, line_smoothing=0.85))
-	return fig
-
-def annotated_heat_map(scores, sounds):
-	'''make an annotated heatmap of the scores; this is a nice way of making sure you aren't crazy when changing the scoring function'''
-	#Have to flip the arrays so that text is displayed in order
-	temp_scores = np.flip(scores,0)
-	temp_scores[temp_scores == None] = 0
-	fig = ff.create_annotated_heatmap(temp_scores, annotation_text=np.flip(sounds,0))
-	return fig
-
-def sparklines(scores, cols):
-	'''generate sparklines for the given scores; this is a nice way of making sure you aren't crazy when changing the scoring function'''
-	temp_scores = scores
-	temp_scores[temp_scores == None] = 0
-	num_lines = len(temp_scores)
-	fig = make_subplots(num_lines, 1)
-	for index, line in enumerate(temp_scores, start=1):
-		fig.add_trace(go.Scatter(y=line, x=list(range(0,cols)), mode='lines'), index, 1)
-	fig.update_xaxes(visible=False, fixedrange=True)
-	fig.update_yaxes(visible=True)
-	fig.update_layout(annotations=[], overwrite=True)
-	fig.update_layout(
-		showlegend=False,
-		plot_bgcolor="white",
-		margin=dict(t=10,l=10,b=10,r=10)
-		)
-	return fig
-
 def make_phone_scores(phoneme_csv="phoneme_roundness.csv"):
 	'''take a phonemee_roundness csv and turn it into some (pretty arbitrary) scores'''
 	phone2spikiness = {}
@@ -218,7 +169,6 @@ def draw_corpus(structured_corpus):
 		ctx.set_source_rgb(0.3, 0.2, 0.5)  # Solid color
 		ctx.stroke()
 		surface.flush()
-
 
 def draw_polygon(ctx, sides):
 	'''draw unit polygon with given number of sides'''
