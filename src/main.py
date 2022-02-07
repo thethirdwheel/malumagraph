@@ -113,7 +113,7 @@ def draw_syllable(ctx, x, y, syl):
 	r = 5.0
 	ctx.save()
 	ctx.move_to(my_x+r,my_y)
-	#ctx.scale(1.,1. + 1.*syl.stress*0.25)
+	ctx.scale(1.,1. + 1.*syl.stress*0.25)
 	for i,p in enumerate(syl.phones):
 		if (i % 2 == 0):
 			if (p.score > 0.5):
@@ -145,7 +145,10 @@ def draw_word(ctx, x, y, word):
 	word_len = syllable_buffer
 	for i, syl in enumerate(word.syllables):
 		rectangle_y = y - (word_height/4)
-		syllable_len = draw_syllable(ctx,x+word_len,rectangle_y+15,syl)
+		ctx.save()
+		ctx.translate(x+word_len,rectangle_y+15)
+		syllable_len = draw_syllable(ctx,0,0,syl)
+		ctx.restore()
 		word_len = word_len + syllable_len + syllable_buffer
 	word_len = word_len - (syllable_buffer)
 	ctx.save()
@@ -162,7 +165,10 @@ def draw_corpus(structured_corpus):
 		ypos = 20 
 		for l in structured_corpus:
 			for w in l:
-				word_len = draw_word(ctx, xpos, ypos, w)
+				ctx.save()
+				ctx.translate(xpos,ypos)
+				word_len = draw_word(ctx, 0, 0, w)
+				ctx.restore()
 				xpos = xpos + word_len + 20
 			ypos = ypos + 60
 			xpos = 10
@@ -298,15 +304,9 @@ def sketchbook():
 		ctx.restore()
 
 		ctx.save()
-		ctx.translate(20,20)
-		ctx.scale(20,20)
-		draw_polygon(ctx,4)
-		ctx.restore()
-
-		ctx.save()
-		ctx.translate(40,40)
-		ctx.scale(20,20)
-		draw_polygon(ctx,5)
+		ctx.translate(160,40)
+		ctx.scale(40,20)
+		draw_polycloud(ctx, 6, 1)
 		ctx.restore()
 
 		ctx.stroke()
