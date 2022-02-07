@@ -398,8 +398,11 @@ def main(args):
 	else:
 		print("using pre-existing sqlite database", file=sys.stderr)
 
-	structured_corpus = make_structured_corpus(args.corpus, args.cmudictdb)
-	draw_corpus(structured_corpus)
+	if (args.sketchbook):
+		sketchbook()
+	else:
+		structured_corpus = make_structured_corpus(args.corpus, args.cmudictdb)
+		draw_corpus(structured_corpus)
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Transform a corpus of English text into a non-representative visualization preserving the sense of its sounds through sound-shape correspondence")
