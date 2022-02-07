@@ -26,6 +26,10 @@ Thankfully the WSJ project references [this work](https://www.aclweb.org/antholo
 
 Initially, we just wanted to graph the "roundness" of the phonemes, in the order of the provided corpus.  However, it's also interesting to try to use the syllables as the unit of calculation.  We're also interested in applying multipliers based on stress, to emphasize sounds in stressed syllables over unstressed ones.  Breaking things into syllables also seems like it would help with future efforts to incorporate rhyme, assonance, alliteration, and other content of interest.
 
+Some experiments with the visualization have made me believe that distinguishability is an important element for the success of this project.  Also, my intuitions about what would generate a more or less "spikey" seeming shape have been influenced by these experiments and are now better informed by research.  In particular, [this work](https://jov.arvojournals.org/article.aspx?articleid=2765047) provides a shape space for preattentive features which effectively decomposes distinguishability into three dimensions: spikiness, compactness, and segmentability.  I'm implicitly leveraging compactness to distinguish syllables, words, and lines (by putting space between them).  Segmentability is basically how much a shape appears to consist of joined segments.  Compactness is basically the ratio of the area of the bounding box of the shape to the area of the hspae itself (i.e. how "space filling" the shape is).  Obviously, color provides a lot of distinguishability as well. 
+
+Going forward, I want to make sure that different dimensions of the sound are assigned to highly distinguishable visual dimensions to maximize intuitive correspondences.
+
 ## Note about iterating on the sqlite database (cmudict.db)
 
 I'm developing on a Windows box, which leads to all sorts of nonsense.  One thing is that you can't redirect the stdout output of the cmudict.db from the docker run output to your filesystem and get something that the Dockerfile can pull into the image next time you run docker build.  You'll get the error "sqlite3.DatabaseError: file is not a database" if you mess this up.  The way out is to build your docker container and run /bin/bash in it in interactive mode
@@ -50,3 +54,4 @@ https://www.isca-speech.org/archive/Odyssey_2020/pdfs/93.pdf
 https://arxiv.org/pdf/1703.10135.pdf
 https://journals.sagepub.com/doi/abs/10.1177/0023830913507694
 https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0208874
+https://jov.arvojournals.org/article.aspx?articleid=2765047
