@@ -135,7 +135,7 @@ class Syllabification:
 				syllable.append({p.phone: phone_scores[p.phone]})
 			syllabification.append(syllable)
 		return json.dumps(syllabification, separators=(',', ':'))
-	
+
 	def from_json(word, word_json):
 		w_obj = json.loads(word_json)
 		#AH0 M is just a placeholder... I know this is horribly ugly but I'm just trying to get something working
@@ -151,14 +151,17 @@ class Syllabification:
 		w.syllables = syllables
 		return w
 
+
 def draw_syllable(ctx, x, y, syl):
 	'''love a rectangle with a wiggle in it'''
 	syllable_len = 0
-	syllable_height = 30 + 30*syl.stress*0.25
+	syllable_height = 30
 	my_x = x
 	my_y = y
 	r = 5.0
+	ctx.save()
 	ctx.move_to(my_x+r,my_y)
+	ctx.scale(1.,1. + 1.*syl.stress*0.25)
 	for i,p in enumerate(syl.phones):
 		if (i % 2 == 0):
 			if (p.score > 0.5):
@@ -180,15 +183,14 @@ def draw_syllable(ctx, x, y, syl):
 		my_x = my_x + 2*r
 		syllable_len = syllable_len + 2*r
 	ctx.rectangle(x-r, y-(syllable_height/2), syllable_len, syllable_height)
+	ctx.restore()
 	return syllable_len
 
 def draw_word(ctx, x, y, word):
 	'''let's make boxes with syllables inside them'''
 	syllable_buffer = 10
 	word_height = 20
-	syllable_height = 30
-	#print(f"word: {word.word} syllables: {word.syllables}",file=sys.stderr)
-	word_len = syllable_buffer 
+	word_len = syllable_buffer
 	for i, syl in enumerate(word.syllables):
 		rectangle_y = y - (word_height/4)
 		syllable_len = draw_syllable(ctx,x+word_len,rectangle_y+15,syl)
@@ -213,6 +215,78 @@ def draw_corpus(structured_corpus):
 		ctx.set_source_rgb(0.3, 0.2, 0.5)  # Solid color
 		ctx.stroke()
 		surface.flush()
+
+
+def draw_polygon(ctx, sides):
+	'''draw unit polygon with given number of sides'''
+	unit_angle = 2*math.pi / sides
+	x = 1
+	y = 0
+	#Add points at the end of the line from the center to the start, rotated by the unit angle * i
+	ctx.move_to(x,y)
+	for i in range(sides+1): #+1 because we want to get back to the start
+		cur_x = x*math.cos(unit_angle*i) - y*math.sin(unit_angle*i)
+		cur_y = x*math.sin(unit_angle*i) + y*math.cos(unit_angle*i)
+		ctx.line_to(cur_x,cur_y)
+
+#if x,y is the original point and a is the new x coordinate and the new y coordinate is ma + b, d is the desired distance from the first coordinate
+#a = (sqrt(-b^2 - 2 b m x + 2 b y + d^2 m^2 + d^2 - m^2 x^2 + 2 m x y - y^2) - b m + m y + x)/(m^2 + 1)
+#we also want the additional constraint that x1,y1 is always further away from the origin than x,y (so that the bulges go outwards)
+def x1y1_given_ymxbd(y,m,x,b,d):
+	x1 = (math.sqrt(-1*b**2 - 2*b*m*x + 2*b*y + d**2*m**2 + d**2-m**2*x**2+2*m*x*y-y**2) - b*m+m*y+x)/(m**2+1)
+	y1 = m*x1+b
+	#if x-x1 is positive, the alternate x1 will be greater than x, if x-x1 is negative, the alternate x1 will be less than x (i.e. it swaps the relationship between x and x1)
+	alternate_x1 = x + (x-x1)
+	alternate_y1 = m*alternate_x1 + b
+	#We want whichever point is further from the origin (e.g. outside the shape)
+	if distance(x1,y1,0,0) < distance(alternate_x1,alternate_y1,0,0):
+		print(f"FLIPPING DIRECTION OF LINE: {x1},{y1} closer to 0,0 than {alternate_x1},{alternate_y1}", file=sys.stderr)
+		return alternate_x1,alternate_y1
+	return x1,y1
+
+def distance(x,y,x1,y1):
+	return math.sqrt((x1-x)**2+(y1-y)**2)
+
+#calculate slope and y intercept for line passing through x1,y1 and x2,y2
+def mb_from_points(x1,y1,x2,y2):
+	m = (y2-y1)/(x2-x1)
+	b = y1 - m*x1
+	return m,b
+
+def draw_polycloud(ctx, sides, roundness):
+	'''draw unit polycloud with given number of sides (polygon with line-length bumps)'''
+	unit_angle = 2*math.pi / sides
+	x0 = 0
+	y0 = 1
+	x = x0
+	y = y0
+	ctx.move_to(x,y)
+	for i in range(sides):
+		cur_angle = unit_angle*(i+1)
+		cur_x = x0*math.cos(cur_angle) + y0*math.sin(cur_angle)
+		cur_y = x0*math.sin(cur_angle) + y0*math.cos(cur_angle)
+	
+		#why do we have this if statement? To stop ourselves from dividing by 0, only bad news is I don't know what to do instead :(
+		if (cur_x-x) != 0:
+			m = (cur_y-y)/(cur_x-x)
+			perpendicular_m = -1/m
+			b1 = y - perpendicular_m*x
+			b2 = cur_y - perpendicular_m*cur_x
+			x1,y1 = x1y1_given_ymxbd(y,perpendicular_m,x,b1,distance(x,y,cur_x,cur_y))
+			x2,y2 = x1y1_given_ymxbd(cur_y,perpendicular_m,cur_x,b2,distance(x,y,cur_x,cur_y))
+			print(f"perpendicular_m: {perpendicular_m} cur_angle: {cur_angle/math.pi}, sin: {math.sin(cur_angle)} cos: {math.cos(cur_angle)}", file=sys.stderr)
+		else:
+			print(f"Didn't update x1,y1,x2,y2", file=sys.stderr)
+		print(f"i: {i} end1: ({x},{y}), pt1: ({x1},{y1}), pt2: ({x2},{y2}), end2: ({cur_x}, {cur_y}) dist: {distance(cur_x,cur_y,0,0)}", file=sys.stderr)
+		#I think by shifting along the line x1,y1->x2,y2 we can maybe be smoothly parameterized?
+		guideline_slope, guideline_intercept = mb_from_points(x1,y1,x2,y2)
+		control_point_1_x = x1*roundness + x2*(1-roundness) #in theory if roundness is 1.0, control_point_1 will be at x1,y1, if it is 0 it will be at x2,y2
+		control_point_1_y = guideline_slope*control_point_1_x + guideline_intercept
+		control_point_2_x = x1*(1-roundness) + x2*roundness
+		control_point_2_y = guideline_slope*control_point_2_x + guideline_intercept
+		ctx.curve_to(control_point_1_x,control_point_1_y,control_point_2_x,control_point_2_y,cur_x,cur_y)
+		x = cur_x
+		y = cur_y
 
 def make_cmudict(cmudict_file="cmudict.rep"):
 	'''build an in-memory representation of the cmu pronouncing dictionary: it maps words to a string representing the phonetic syllables with stress information'''
@@ -251,6 +325,33 @@ def cmudict_to_sqlite(cmudict, phone_scores, sqlite_file="cmudict.db"):
 	con.commit()
 	con.close()
 
+WIDTH, HEIGHT = 612, 792
+with cairo.SVGSurface(os.fdopen(sys.stdout.fileno(), "wb", closefd=False), WIDTH, HEIGHT) as surface:
+	ctx = cairo.Context(surface)
+
+	ctx.save()
+	ctx.translate(40,40)
+	ctx.scale(20,20)
+	draw_polycloud(ctx, 4, 1)
+	draw_polycloud(ctx, 4, 0.5)
+	draw_polycloud(ctx, 4, 0)
+	ctx.restore()
+
+	# ctx.save()
+	# ctx.translate(20,20)
+	# ctx.scale(20,20)
+	# draw_polygon(ctx,4)
+	# ctx.restore()
+
+	# ctx.save()
+	# ctx.translate(40,40)
+	# ctx.scale(20,20)
+	# draw_polygon(ctx,5)
+	# ctx.restore()
+
+	ctx.stroke()
+	surface.flush()
+quit()
 
 if not os.path.exists("cmudict.db"):
 	phone2spikiness= make_phone_scores()
@@ -266,12 +367,11 @@ else:
 con = sqlite3.connect("cmudict.db")
 cur = con.cursor()
 punctuation_table = str.maketrans(dict.fromkeys(string.punctuation))
+#The structured corpus is an array of structured_lines
+#Each structured line is an array of Syllabifications of the words in the coinciding line in the original corpus
 structured_corpus = []
-rows = 0
-cols = 0
 with open("corpus.txt") as f:
 	for l in f:
-		rows += 1
 		structured_line = []
 		for word in l.split(" "):
 			clean_word = word.upper().strip().translate(punctuation_table)
@@ -292,6 +392,7 @@ with open("corpus.txt") as f:
 con.close()
 
 draw_corpus(structured_corpus)
+
 
 #Joe's idea for producing sound-shape correspondence (instead of graphing "spikiness")
 #Create (normal) distribution
