@@ -30,6 +30,8 @@ Some experiments with the visualization have made me believe that distinguishabi
 
 Going forward, I want to make sure that different dimensions of the sound are assigned to highly distinguishable visual dimensions to maximize intuitive correspondences.
 
+I'm currently exploring the use of [phoneme perceptual similarity matrices](https://sites.google.com/site/similaritymatrices/phoneme-similarity-matrices/perceptual-similarity-matrices) to identify similar phones in a text. The goal here would be to group similar phones and assign them the same color in a text visualization.
+
 ## Note about iterating on the sqlite database (cmudict.db)
 
 I'm developing on a Windows box, which leads to all sorts of nonsense.  One thing is that you can't redirect the stdout output of the cmudict.db from the docker run output to your filesystem and get something that the Dockerfile can pull into the image next time you run docker build.  You'll get the error "sqlite3.DatabaseError: file is not a database" if you mess this up.  The way out is to build your docker container and run /bin/bash in it in interactive mode
@@ -55,3 +57,4 @@ https://arxiv.org/pdf/1703.10135.pdf
 https://journals.sagepub.com/doi/abs/10.1177/0023830913507694
 https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0208874
 https://jov.arvojournals.org/article.aspx?articleid=2765047
+https://sites.google.com/site/similaritymatrices/phoneme-similarity-matrices/perceptual-similarity-matrices
